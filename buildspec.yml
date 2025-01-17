@@ -1,0 +1,46 @@
+version: 0.2
+
+phases:
+  install:
+    runtime-versions:
+      docker: 19
+    commands:
+      # Install dependencies (in case your build environment does not have Docker pre-installed)
+      - echo Installing dependencies...
+      - yum install -y docker
+      - service docker start
+      - usermod -a -G docker ec2-user
+      - chkconfig docker on
+
+  pre_build:
+    commands:
+      - echo Starting Docker...
+      - service docker start
+
+  build:
+    commands:
+      - echo Creating website directory and Dockerfile...
+      - mkdir -p /home/ec2-user/website
+      - echo "<html><body><h2>Hello from Aayushi on EC2 using Docker</h2></body></html>" > /home/ec2-user/website/index.html
+      - echo "FROM nginx:alpine" > /home/ec2-user/website/Dockerfile
+      - echo "COPY index.html /usr/share/nginx/html/index.html" >> /home/ec2-user/website/Dockerfile
+      - echo "EXPOSE 80" >> /home/ec2-user/website/Dockerfile
+      
+      - cd /home/ec2-user/website
+      - docker build -t website-image .
+  
+  post_build:
+    commands:
+     
+      - echo Running Docker container...
+      - docker run -d -p 80:80 website-image
+      
+artifacts:
+  files:
+    - '**/*'
+  base-directory: '/home/ec2-user/website'
+  discard-paths: yes
+
+cache:
+  paths:
+    - '/root/.m2/**/*'
